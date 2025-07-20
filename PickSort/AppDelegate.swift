@@ -21,6 +21,9 @@ protocol ControlsViewControllerDelegate: AnyObject {
     
     // Tells the delegate that the tags for a URL have been updated.
     func controlsViewController(_ controller: ControlsViewController, didUpdateTags newTags: [String], for url: URL)
+    
+    // NEW: Asks the delegate for all tagged images.
+    func allImageTags(for controller: ControlsViewController) -> [URL: [String]]
 }
 
 
@@ -50,7 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         splitVC.addSplitViewItem(controlsItem)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
             styleMask: [.miniaturizable, .closable, .resizable, .titled],
             backing: .buffered,
             defer: false)
@@ -91,7 +94,6 @@ class ImageViewController: NSViewController {
     
     private lazy var previousButton: NSButton = {
         let button = NSButton(image: NSImage(named: NSImage.goBackTemplateName)!, target: self, action: #selector(navigateImage))
-        button.translatesAutoresizingMaskIntoConstraints = false
         button.isBordered = false
         button.tag = -1
         return button
@@ -99,7 +101,6 @@ class ImageViewController: NSViewController {
     
     private lazy var nextButton: NSButton = {
         let button = NSButton(image: NSImage(named: NSImage.goForwardTemplateName)!, target: self, action: #selector(navigateImage))
-        button.translatesAutoresizingMaskIntoConstraints = false
         button.isBordered = false
         button.tag = 1
         return button
@@ -107,10 +108,18 @@ class ImageViewController: NSViewController {
     
     private let imageNameLabel: NSTextField = {
         let label = NSTextField(labelWithString: "No Image")
-        label.translatesAutoresizingMaskIntoConstraints = false
         label.alignment = .center
         label.textColor = .secondaryLabelColor
         return label
+    }()
+    
+    // --- REFACTORED: Simplified bottom controls stack ---
+    private lazy var bottomControlsStackView: NSStackView = {
+        let stackView = NSStackView(views: [previousButton, imageNameLabel, nextButton])
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.distribution = .fillProportionally
+        stackView.alignment = .centerY
+        return stackView
     }()
 
     override func viewDidLoad() {
@@ -122,22 +131,17 @@ class ImageViewController: NSViewController {
     
     private func setupUI() {
         view.addSubview(imageView)
-        view.addSubview(previousButton)
-        view.addSubview(nextButton)
-        view.addSubview(imageNameLabel)
+        view.addSubview(bottomControlsStackView)
         
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
             imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-            imageNameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 8),
-            imageNameLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
-            imageNameLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            imageNameLabel.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -80),
-            previousButton.centerYAnchor.constraint(equalTo: imageNameLabel.centerYAnchor),
-            previousButton.trailingAnchor.constraint(equalTo: imageNameLabel.leadingAnchor, constant: -8),
-            nextButton.centerYAnchor.constraint(equalTo: imageNameLabel.centerYAnchor),
-            nextButton.leadingAnchor.constraint(equalTo: imageNameLabel.trailingAnchor, constant: 8),
+            
+            bottomControlsStackView.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 10),
+            bottomControlsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            bottomControlsStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            bottomControlsStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
         ])
     }
     
@@ -147,7 +151,7 @@ class ImageViewController: NSViewController {
             imageNameLabel.stringValue = "No Images Found"
             previousButton.isEnabled = false
             nextButton.isEnabled = false
-            controlsVC?.updateTagDisplay() // Tell controls to update
+            controlsVC?.updateTagDisplay()
             return
         }
         
@@ -156,7 +160,6 @@ class ImageViewController: NSViewController {
         previousButton.isEnabled = currentIndex > 0
         nextButton.isEnabled = currentIndex < imageURLs.count - 1
         
-        // After updating self, tell the controls pane to update its tag display
         controlsVC?.updateTagDisplay()
     }
     
@@ -168,18 +171,25 @@ class ImageViewController: NSViewController {
         }
     }
     
+    private func showAlert(title: String, text: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+    
     // --- Tag Persistence ---
     private let imageTagsKey = "imageTagsKey"
     
     private func saveTags() {
-        // We need to convert [URL: [String]] to [String: [String]] for property list serialization.
         let stringKeyedTags = Dictionary(uniqueKeysWithValues: imageTags.map { (url, tags) in (url.absoluteString, tags) })
         UserDefaults.standard.set(stringKeyedTags, forKey: imageTagsKey)
     }
     
     private func loadTags() {
         guard let stringKeyedTags = UserDefaults.standard.dictionary(forKey: imageTagsKey) as? [String: [String]] else { return }
-        // Convert back to [URL: [String]]
         self.imageTags = Dictionary(uniqueKeysWithValues: stringKeyedTags.compactMap { (key, tags) in
             guard let url = URL(string: key) else { return nil }
             return (url, tags)
@@ -206,7 +216,12 @@ extension ImageViewController: ControlsViewControllerDelegate {
     
     func controlsViewController(_ controller: ControlsViewController, didUpdateTags newTags: [String], for url: URL) {
         imageTags[url] = newTags
-        saveTags() // Persist changes
+        saveTags()
+    }
+    
+    // NEW: Provide all tagged data to the delegate caller.
+    func allImageTags(for controller: ControlsViewController) -> [URL: [String]] {
+        return self.imageTags
     }
 }
 
@@ -215,8 +230,10 @@ extension ImageViewController: ControlsViewControllerDelegate {
 class ControlsViewController: NSViewController {
 
     weak var delegate: ControlsViewControllerDelegate?
+    
+    // MOVED: State for destination URL is now here.
+    private var destinationAlbumURL: URL?
 
-    // --- NEW: Data source for the searchable tags ---
     private let allTags: [String] = [
         "Abim Mayu Indra Ardiansah", "Abimanyu Damarjati", "Adeline Charlotte Augustinne", "Adhis Helsa Aurellia", "Adinda Meutia Rizkina",
         "Adrian Alfajri", "Adrian Hananto", "Adya Muhammad Prawira", "Ageng Tawang Aryonindito", "Agung M Syukra Al Muzakir",
@@ -261,7 +278,6 @@ class ControlsViewController: NSViewController {
     ]
     private var filteredTags: [String] = []
 
-    // --- UPDATED UI Elements for Tagging ---
     private let currentTagsTitleLabel: NSTextField = {
         let label = NSTextField(labelWithString: "Tag Saat Ini:")
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -279,7 +295,7 @@ class ControlsViewController: NSViewController {
     private lazy var tagComboBox: NSComboBox = {
         let comboBox = NSComboBox()
         comboBox.translatesAutoresizingMaskIntoConstraints = false
-        comboBox.usesDataSource = true // We will provide the data
+        comboBox.usesDataSource = true
         comboBox.placeholderString = "Cari atau pilih nama"
         return comboBox
     }()
@@ -291,7 +307,6 @@ class ControlsViewController: NSViewController {
         return button
     }()
     
-    // --- NEW: Remove Tag Button ---
     private lazy var removeLastTagButton: NSButton = {
         let button = NSButton(title: "Hapus Terakhir", target: self, action: #selector(removeLastTagTapped))
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -299,7 +314,6 @@ class ControlsViewController: NSViewController {
         return button
     }()
     
-    // --- Original UI Elements ---
     private let directoryLabel: NSTextField = {
         let label = NSTextField(labelWithString: "Direktori: (Belum Dipilih)")
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -313,6 +327,33 @@ class ControlsViewController: NSViewController {
         button.bezelStyle = .rounded
         return button
     }()
+    
+    // --- MOVED: Destination and Processing UI ---
+    private let destinationAlbumLabel: NSTextField = {
+        let label = NSTextField(labelWithString: "Album Tujuan: (Belum Dipilih)")
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.textColor = .secondaryLabelColor
+        label.lineBreakMode = .byTruncatingHead
+        return label
+    }()
+    
+    private lazy var selectDestinationButton: NSButton = {
+        let button = NSButton(title: "Pilih Tujuan...", target: self, action: #selector(selectDestinationTapped))
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.bezelStyle = .rounded
+        return button
+    }()
+    
+    private lazy var processButton: NSButton = {
+        let button = NSButton(title: "Proses & Salin Gambar", target: self, action: #selector(processButtonTapped))
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.bezelStyle = .rounded
+        button.contentTintColor = .white
+        button.wantsLayer = true
+        button.layer?.backgroundColor = NSColor.systemBlue.cgColor
+        button.layer?.cornerRadius = 5
+        return button
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -320,39 +361,55 @@ class ControlsViewController: NSViewController {
         setupUI()
         setupComboBox()
         restoreSavedDirectory()
+        restoreSavedDestinationDirectory()
+        updateProcessButtonState()
     }
     
     private func setupUI() {
+        let divider = NSBox()
+        divider.boxType = .separator
+        
         // Add all subviews
-        [directoryLabel, selectDirectoryButton, currentTagsTitleLabel, currentTagsDisplayLabel, tagComboBox, addTagButton, removeLastTagButton].forEach(view.addSubview)
+        [directoryLabel, selectDirectoryButton, currentTagsTitleLabel, currentTagsDisplayLabel, tagComboBox, addTagButton, removeLastTagButton, divider, destinationAlbumLabel, selectDestinationButton, processButton].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview($0)
+        }
         
         NSLayoutConstraint.activate([
-            // Directory Selector
+            // Source Directory
             selectDirectoryButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
             selectDirectoryButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             directoryLabel.centerYAnchor.constraint(equalTo: selectDirectoryButton.centerYAnchor),
             directoryLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             directoryLabel.trailingAnchor.constraint(equalTo: selectDirectoryButton.leadingAnchor, constant: -8),
             
-            // Current Tags Display
+            // Tagging Section
             currentTagsTitleLabel.topAnchor.constraint(equalTo: directoryLabel.bottomAnchor, constant: 30),
             currentTagsTitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            
             currentTagsDisplayLabel.topAnchor.constraint(equalTo: currentTagsTitleLabel.bottomAnchor, constant: 8),
             currentTagsDisplayLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             currentTagsDisplayLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            
-            // New Tag Input (using the combo box)
             tagComboBox.topAnchor.constraint(equalTo: currentTagsDisplayLabel.bottomAnchor, constant: 20),
             tagComboBox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             tagComboBox.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-
-            // Tag Action Buttons
             addTagButton.topAnchor.constraint(equalTo: tagComboBox.bottomAnchor, constant: 8),
             addTagButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            
             removeLastTagButton.centerYAnchor.constraint(equalTo: addTagButton.centerYAnchor),
-            removeLastTagButton.trailingAnchor.constraint(equalTo: addTagButton.leadingAnchor, constant: -8)
+            removeLastTagButton.trailingAnchor.constraint(equalTo: addTagButton.leadingAnchor, constant: -8),
+            
+            // Divider and Destination Section
+            divider.topAnchor.constraint(equalTo: addTagButton.bottomAnchor, constant: 20),
+            divider.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            divider.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            
+            selectDestinationButton.topAnchor.constraint(equalTo: divider.bottomAnchor, constant: 20),
+            selectDestinationButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            destinationAlbumLabel.centerYAnchor.constraint(equalTo: selectDestinationButton.centerYAnchor),
+            destinationAlbumLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            destinationAlbumLabel.trailingAnchor.constraint(equalTo: selectDestinationButton.leadingAnchor, constant: -8),
+            
+            processButton.topAnchor.constraint(equalTo: selectDestinationButton.bottomAnchor, constant: 20),
+            processButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
         ])
     }
     
@@ -361,25 +418,114 @@ class ControlsViewController: NSViewController {
         tagComboBox.delegate = self
     }
     
+    // --- MOVED: Destination and Processing Logic is now here ---
+    @objc private func selectDestinationTapped() {
+        let openPanel = NSOpenPanel()
+        openPanel.message = "Pilih direktori album tujuan"
+        openPanel.prompt = "Pilih"
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        
+        if openPanel.runModal() == .OK, let url = openPanel.url {
+            saveDestinationPermission(for: url)
+            self.destinationAlbumURL = url
+            updateProcessButtonState()
+        }
+    }
+    
+    @objc private func processButtonTapped() {
+        guard let destURL = destinationAlbumURL else {
+            showAlert(title: "Tujuan Tidak Dipilih", text: "Silakan pilih album tujuan terlebih dahulu.")
+            return
+        }
+        
+        guard let allTags = delegate?.allImageTags(for: self), !allTags.isEmpty else {
+            showAlert(title: "Tidak Ada Tag", text: "Tidak ada gambar yang ditandai untuk diproses.")
+            return
+        }
+        
+        guard destURL.startAccessingSecurityScopedResource() else {
+            showAlert(title: "Kesalahan Izin", text: "Tidak dapat mengakses direktori tujuan. Silakan pilih kembali.")
+            return
+        }
+        defer { destURL.stopAccessingSecurityScopedResource() }
+
+        var copiedFilesCount = 0
+        var errorCount = 0
+        
+        for (imageURL, tags) in allTags {
+            guard !tags.isEmpty, imageURL.startAccessingSecurityScopedResource() else { continue }
+            
+            for tag in tags {
+                let tagSubdirectoryURL = destURL.appendingPathComponent(tag)
+                let destinationImageURL = tagSubdirectoryURL.appendingPathComponent(imageURL.lastPathComponent)
+                
+                do {
+                    try FileManager.default.createDirectory(at: tagSubdirectoryURL, withIntermediateDirectories: true, attributes: nil)
+                    if !FileManager.default.fileExists(atPath: destinationImageURL.path) {
+                        try FileManager.default.copyItem(at: imageURL, to: destinationImageURL)
+                        copiedFilesCount += 1
+                    }
+                } catch {
+                    print("Error processing file \(imageURL.lastPathComponent) for tag \(tag): \(error)")
+                    errorCount += 1
+                }
+            }
+            imageURL.stopAccessingSecurityScopedResource()
+        }
+        
+        showAlert(title: "Proses Selesai", text: "Berhasil menyalin \(copiedFilesCount) file. Gagal: \(errorCount) file.")
+    }
+    
+    private func updateProcessButtonState() {
+        if let destURL = destinationAlbumURL {
+            destinationAlbumLabel.stringValue = "Album Tujuan: \(destURL.lastPathComponent)"
+            destinationAlbumLabel.toolTip = destURL.path
+            processButton.isEnabled = true
+        } else {
+            destinationAlbumLabel.stringValue = "Album Tujuan: (Belum Dipilih)"
+            destinationAlbumLabel.toolTip = nil
+            processButton.isEnabled = false
+        }
+    }
+    
+    // --- MOVED: Destination Persistence ---
+    private let destinationBookmarkKey = "destinationBookmarkKey"
+    
+    private func saveDestinationPermission(for url: URL) {
+        do {
+            let bookmarkData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            UserDefaults.standard.set(bookmarkData, forKey: destinationBookmarkKey)
+        } catch {
+            print("Error saving destination bookmark: \(error)")
+        }
+    }
+    
+    private func restoreSavedDestinationDirectory() {
+        guard let bookmarkData = UserDefaults.standard.data(forKey: destinationBookmarkKey) else { return }
+        
+        do {
+            var isStale = false
+            let url = try URL(resolvingBookmarkData: bookmarkData, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale)
+            if isStale { saveDestinationPermission(for: url) }
+            
+            if url.startAccessingSecurityScopedResource() {
+                self.destinationAlbumURL = url
+                url.stopAccessingSecurityScopedResource() // Stop access after getting the URL
+            }
+        } catch {
+            print("Error restoring destination bookmark: \(error)")
+        }
+    }
+    
+    // --- Original methods below ---
+    
     @objc private func addTagTapped() {
-        guard let url = delegate?.currentImageURL(for: self) else {
-            print("No image selected to tag.")
-            return
-        }
-        
+        guard let url = delegate?.currentImageURL(for: self) else { return }
         let newTag = tagComboBox.stringValue
-        
-        guard allTags.contains(newTag) else {
-            print("Invalid tag: '\(newTag)'. Please select a name from the list.")
-            return
-        }
-        
+        guard allTags.contains(newTag) else { return }
         var currentTags = delegate?.tags(for: self, url: url) ?? []
-        
-        guard currentTags.count < 32 else {
-            print("Maximum of 32 tags reached for this image.")
-            return // Enforce the limit
-        }
+        guard currentTags.count < 32 else { return }
         
         if !currentTags.contains(newTag) {
             currentTags.append(newTag)
@@ -388,23 +534,16 @@ class ControlsViewController: NSViewController {
             tagComboBox.stringValue = ""
             filteredTags = allTags
             tagComboBox.reloadData()
-        } else {
-            print("Tag '\(newTag)' already exists for this image.")
         }
     }
     
-    // --- NEW: Action for Remove Button ---
     @objc private func removeLastTagTapped() {
         guard let url = delegate?.currentImageURL(for: self) else { return }
-        
         var currentTags = delegate?.tags(for: self, url: url) ?? []
-        
         if !currentTags.isEmpty {
             currentTags.removeLast()
             delegate?.controlsViewController(self, didUpdateTags: currentTags, for: url)
             updateTagDisplay()
-        } else {
-            print("No tags to remove.")
         }
     }
     
@@ -422,7 +561,7 @@ class ControlsViewController: NSViewController {
             currentTagsDisplayLabel.stringValue = tags.joined(separator: ", ")
         }
         setTaggingUI(enabled: true)
-        removeLastTagButton.isEnabled = !tags.isEmpty // Disable remove button if no tags exist
+        removeLastTagButton.isEnabled = !tags.isEmpty
     }
     
     private func setTaggingUI(enabled: Bool) {
@@ -451,6 +590,9 @@ class ControlsViewController: NSViewController {
     }
     
     private func scanDirectoryAndInformDelegate(at url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        
         let validExtensions = ["jpg", "jpeg", "png", "heic", "gif", "tiff"]
         do {
             let contents = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isRegularFileKey], options: .skipsHiddenFiles)
@@ -485,17 +627,26 @@ class ControlsViewController: NSViewController {
                     self.updateDirectoryLabel(with: url)
                     self.scanDirectoryAndInformDelegate(at: url)
                 }
+                url.stopAccessingSecurityScopedResource()
             }
         } catch {
             print("Error restoring directory bookmark: \(error)")
         }
+    }
+    
+    private func showAlert(title: String, text: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
 
 // MARK: - NSComboBox Delegate & DataSource
 extension ControlsViewController: NSComboBoxDataSource, NSComboBoxDelegate {
     
-    // --- DATA SOURCE METHODS ---
     func numberOfItems(in comboBox: NSComboBox) -> Int {
         return filteredTags.count
     }
@@ -505,9 +656,7 @@ extension ControlsViewController: NSComboBoxDataSource, NSComboBoxDelegate {
         return filteredTags[index]
     }
     
-    // --- DELEGATE METHODS for filtering ---
     func comboBox(_ comboBox: NSComboBox, completedString string: String) -> String? {
-        // This provides autocompletion
         return allTags.first { $0.lowercased().hasPrefix(string.lowercased()) }
     }
     
@@ -525,14 +674,11 @@ extension ControlsViewController: NSComboBoxDataSource, NSComboBoxDelegate {
         comboBox.reloadData()
     }
     
-    // --- NEW: Handle Enter Key Press ---
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         if commandSelector == #selector(insertNewline(_:)) {
-            // User pressed Enter, so treat it like a button click.
             self.addTagTapped()
-            return true // We handled the command.
+            return true
         }
-        // For all other commands, use the default behavior.
         return false
     }
 }
