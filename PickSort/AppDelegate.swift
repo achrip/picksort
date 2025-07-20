@@ -216,30 +216,84 @@ class ControlsViewController: NSViewController {
 
     weak var delegate: ControlsViewControllerDelegate?
 
+    // --- NEW: Data source for the searchable tags ---
+    private let allTags: [String] = [
+        "Abim Mayu Indra Ardiansah", "Abimanyu Damarjati", "Adeline Charlotte Augustinne", "Adhis Helsa Aurellia", "Adinda Meutia Rizkina",
+        "Adrian Alfajri", "Adrian Hananto", "Adya Muhammad Prawira", "Ageng Tawang Aryonindito", "Agung M Syukra Al Muzakir",
+        "Ahmad Al Wabil", "Ahmed Nizhan Haikal", "Ailsa Anarghia Rachman", "Aissya Jelitawati", "Akbar Febri W A",
+        "Aldrian Raffi Wicaksono", "Ali Jazzy Rasyid", "Alifa Reppawali", "Alvin Justine", "Alya Salsabila Haritsian",
+        "Amelia Morencia Irena", "Ammar Sufyan", "Andrea Octaviani", "Angel Augustine Cheyla", "Angeline Rachel",
+        "Anisa Amalia Putri", "Annisya Dwi Fitry", "Aretha Natalova Wahyudi", "Arief Roihan Nur Rahman", "Arin Juan Sari",
+        "Aristo Yongka", "Arya Maulana Bratajaya Akmal", "Ashraf Alif Adillah", "Atilla Rizkyara", "Aulia Nisrina Rosanita",
+        "Aurelly Joeandani", "Azalia Amanda Putri Sampurno", "Benedictus Yogatama Favian Satyajati", "Brayen Fredgin Cahyadi",
+        "Bryan Bramaskara", "Calista Abigail Wairata", "Callista Althea Hartanto", "Callista Andreane", "Camilla Tiara Dewi",
+        "Chairal Octavyanz Tanjung", "Chandra Rudy Saputra", "Channo Adikara", "Chavia Viriela Budianto", "Chikmah",
+        "Christian Luis Efendy", "Ciko Edo Febrian", "Claurent Virginie Surya", "Crescentia Karen Prasetya", "Cynthia Shabrina",
+        "Daven Karim", "Destu Cikal Ramdani", "Devina Sepfia Rizal", "Dicky Dharma Susanto", "Dwitya Amanda Ayuningtias",
+        "Elia Karoeniadi", "Elisabeth Levana Thedjakusuma", "Eliza Vornia", "Emmanuel Rieno Bobba Pratama", "Esthervany Anrika",
+        "Ethelind Septiani Metta", "Evan Lokajaya", "Evelyn Wijaya", "Fa'izah Fida Afifah", "Fachry Anwar Hamsyana",
+        "Farida Noorseptiyanti", "Farrah Allysha Maharani", "Feby Agatha Christie Kurniawan", "Felda Everyl", "Felicia Rachell Korich",
+        "Ferdinand Lunardy", "Flavia Angelina Witarsah", "Francesco Emmanuel Setiawan", "Franco Antonio Pranata", "Frengky Gunawan",
+        "Frewin Saputra Sidabariba", "Gabriel Christopher Tanod", "Gede Binar Kukuh Widanda", "George Timothy Mars", "Georgius Kenny Gunawan",
+        "Gibran Shevaldo", "Gladys Lionardi", "Grace Maria Yosephine Agustin Gultom", "Grachia Uliari Magdalena Purba", "Griselda Shavilla",
+        "Gustavo Hoze Ercolesea", "Hafizhuddin Hanif", "Hans Cahya Buana", "Hany Wijaya", "Hendrik Nicolas Carlo",
+        "Ikhsan Dhaffa Nugraha", "Ilham Hadi Shahputra", "Ivan Setiawan", "Jehoiada Wong", "Jessica", "Jessica Lynn Wibowo",
+        "Jesslyn Amanda Mulyawan", "Johansen Marlee", "Jonathan Calvin Sutrisna", "Jonathan Tjahjadi", "Jordan Josdaan",
+        "Joreinhard Rotuah Munandar", "Jose Andreas Lie", "Josephine Michelle Kho", "Kelvin Alexander Bong", "Kelvin Ongko Hakim",
+        "Kenneth Mayer Wijaya", "Kevin Priatna", "Khresna Sariyanto", "Lin Dan Christiano", "Louis Oktovianus", "Louise Fernando",
+        "Lysandra Velyca", "Maharani Aulia Syifa", "Marcelinus Gerardo Ari N", "Marshia Haunafi", "Michelle Pandojo Lukman",
+        "Miftah Fauzy", "Mirabella", "Mochammad Dimas Editiya", "Muchamad Iqbal Fauzi", "Muh Irhamdi Fahdiyan Noor",
+        "Muhammad Al Amin Dwiesta", "Muhammad Ardiansyah Asrifah", "Muhammad Ariq Hendry", "Muhammad Asaduddin", "Muhammad Azmi",
+        "Muhammad Fathur Hidayat", "Muhammad Fatih Daffa Fawwaz", "Muhammad Hafizh", "Muhammad Hamzah Robbani", "Muhammad Hannan Massimo Madjid",
+        "Muhammad Keinanthan Wahyuwardhana", "Muhammad Khadafie Satya Sudarto", "Muhammad Rifqi Rahman", "Muhammad Umar Abdul Azis",
+        "Mutakin", "Natasha Charissa Sidharta", "Natasya Felicia Malonda", "Nicholas Tristandi", "Nicholas Vincent Chao",
+        "Nur Fajar Sayyidul Ayyam", "Oxa Marvel Ilman Thaariq", "Patricia Putri Art Syani", "Priscilla Anthonio Kurniawan",
+        "Rais Zainuri", "Raissa Ravelina", "Raphael Gregorius Hakim", "Rastya Widya Hapsari", "Regina Celine Adiwinata",
+        "Reinhart Christopher", "Reymunda Dwi Alfathur", "Reynaldo Marchell Bagas Adji", "Reynard Hansel", "Richard Sugiharto",
+        "Richard Wijaya Harianto", "Rico Tandrio", "Rif'an Amrozi", "Sabri Ramadhani", "Salsabiila Bazaluna Febriadini",
+        "Samuel Dwiputra Tjan", "Satria Dafa Putra Wardhana", "Sessario Ammar Wibowo", "Shawn Andrew", "Shierly Anastasya Lie",
+        "Sieka Puspa Mawary", "Silvester Justine Cahyono", "Stanislaus Kanaya Jerry Febriano", "Stephen Hau", "SUFI ARIFIN",
+        "Syaoki Biek", "Teuku Fazariz Basya", "Thania Natasha", "Theodora Stefani Handojo", "Thingkilia Finnatia Husin",
+        "Tiara Aurelia Putri", "Timothy Elisa Putra", "Tm Revanza Narendra Pradipta", "Tomi Timutius", "Valencia Sutanto",
+        "Valentinus", "Vanessa Audreylia", "Vania Carissa", "Vianna Calista Tamsil", "Victor Chandra", "Vincent Wisnata",
+        "Vira Fitriyani", "William", "Wiwi Oktriani", "Yehezkiel Joseph Widianto", "Yohanes Valentino Stanley",
+        "Yonathan Handoyo", "Yonathan Hilkia", "Zaidan Akmal Rabbani", "Zakia Noorardini", "Zikar Nurizky"
+    ]
+    private var filteredTags: [String] = []
+
     // --- UPDATED UI Elements for Tagging ---
     private let currentTagsTitleLabel: NSTextField = {
-        let label = NSTextField(labelWithString: "Current Tags:")
+        let label = NSTextField(labelWithString: "Tag Saat Ini:")
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
     private let currentTagsDisplayLabel: NSTextField = {
-        let label = NSTextField(labelWithString: "None")
+        let label = NSTextField(labelWithString: "Tidak ada")
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textColor = .secondaryLabelColor
         label.lineBreakMode = .byWordWrapping
         return label
     }()
     
-    private lazy var predefinedTagSelector: NSPopUpButton = {
-        let popUp = NSPopUpButton(frame: .zero)
-        popUp.translatesAutoresizingMaskIntoConstraints = false
-        popUp.addItems(withTitles: ["jawa", "padang", "sunda"])
-        return popUp
+    private lazy var tagComboBox: NSComboBox = {
+        let comboBox = NSComboBox()
+        comboBox.translatesAutoresizingMaskIntoConstraints = false
+        comboBox.usesDataSource = true // We will provide the data
+        comboBox.placeholderString = "Cari atau pilih nama"
+        return comboBox
     }()
     
     private lazy var addTagButton: NSButton = {
-        let button = NSButton(title: "Add Tag", target: self, action: #selector(addTagTapped))
+        let button = NSButton(title: "Tambah Tag", target: self, action: #selector(addTagTapped))
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.bezelStyle = .rounded
+        return button
+    }()
+    
+    // --- NEW: Remove Tag Button ---
+    private lazy var removeLastTagButton: NSButton = {
+        let button = NSButton(title: "Hapus Terakhir", target: self, action: #selector(removeLastTagTapped))
         button.translatesAutoresizingMaskIntoConstraints = false
         button.bezelStyle = .rounded
         return button
@@ -247,14 +301,14 @@ class ControlsViewController: NSViewController {
     
     // --- Original UI Elements ---
     private let directoryLabel: NSTextField = {
-        let label = NSTextField(labelWithString: "Directory: (None Selected)")
+        let label = NSTextField(labelWithString: "Direktori: (Belum Dipilih)")
         label.translatesAutoresizingMaskIntoConstraints = false
         label.lineBreakMode = .byTruncatingHead
         return label
     }()
     
     private lazy var selectDirectoryButton: NSButton = {
-        let button = NSButton(title: "Select...", target: self, action: #selector(selectDirectoryClicked))
+        let button = NSButton(title: "Pilih...", target: self, action: #selector(selectDirectoryClicked))
         button.translatesAutoresizingMaskIntoConstraints = false
         button.bezelStyle = .rounded
         return button
@@ -262,13 +316,15 @@ class ControlsViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        filteredTags = allTags
         setupUI()
+        setupComboBox()
         restoreSavedDirectory()
     }
     
     private func setupUI() {
         // Add all subviews
-        [directoryLabel, selectDirectoryButton, currentTagsTitleLabel, currentTagsDisplayLabel, predefinedTagSelector, addTagButton].forEach(view.addSubview)
+        [directoryLabel, selectDirectoryButton, currentTagsTitleLabel, currentTagsDisplayLabel, tagComboBox, addTagButton, removeLastTagButton].forEach(view.addSubview)
         
         NSLayoutConstraint.activate([
             // Directory Selector
@@ -286,15 +342,23 @@ class ControlsViewController: NSViewController {
             currentTagsDisplayLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             currentTagsDisplayLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             
-            // New Tag Input (using the popup button)
-            predefinedTagSelector.topAnchor.constraint(equalTo: currentTagsDisplayLabel.bottomAnchor, constant: 20),
-            predefinedTagSelector.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            
-            addTagButton.leadingAnchor.constraint(equalTo: predefinedTagSelector.trailingAnchor, constant: 8),
+            // New Tag Input (using the combo box)
+            tagComboBox.topAnchor.constraint(equalTo: currentTagsDisplayLabel.bottomAnchor, constant: 20),
+            tagComboBox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            tagComboBox.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+
+            // Tag Action Buttons
+            addTagButton.topAnchor.constraint(equalTo: tagComboBox.bottomAnchor, constant: 8),
             addTagButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            addTagButton.centerYAnchor.constraint(equalTo: predefinedTagSelector.centerYAnchor),
-            addTagButton.widthAnchor.constraint(equalToConstant: 80)
+            
+            removeLastTagButton.centerYAnchor.constraint(equalTo: addTagButton.centerYAnchor),
+            removeLastTagButton.trailingAnchor.constraint(equalTo: addTagButton.leadingAnchor, constant: -8)
         ])
+    }
+    
+    private func setupComboBox() {
+        tagComboBox.dataSource = self
+        tagComboBox.delegate = self
     }
     
     @objc private func addTagTapped() {
@@ -303,9 +367,10 @@ class ControlsViewController: NSViewController {
             return
         }
         
-        // Get the selected tag from the popup button
-        guard let newTag = predefinedTagSelector.titleOfSelectedItem else {
-            print("No tag selected from dropdown.")
+        let newTag = tagComboBox.stringValue
+        
+        guard allTags.contains(newTag) else {
+            print("Invalid tag: '\(newTag)'. Please select a name from the list.")
             return
         }
         
@@ -319,39 +384,57 @@ class ControlsViewController: NSViewController {
         if !currentTags.contains(newTag) {
             currentTags.append(newTag)
             delegate?.controlsViewController(self, didUpdateTags: currentTags, for: url)
-            updateTagDisplay() // Refresh the UI
+            updateTagDisplay()
+            tagComboBox.stringValue = ""
+            filteredTags = allTags
+            tagComboBox.reloadData()
         } else {
             print("Tag '\(newTag)' already exists for this image.")
         }
     }
     
-    /// Public method called by ImageViewController to refresh the tag display.
+    // --- NEW: Action for Remove Button ---
+    @objc private func removeLastTagTapped() {
+        guard let url = delegate?.currentImageURL(for: self) else { return }
+        
+        var currentTags = delegate?.tags(for: self, url: url) ?? []
+        
+        if !currentTags.isEmpty {
+            currentTags.removeLast()
+            delegate?.controlsViewController(self, didUpdateTags: currentTags, for: url)
+            updateTagDisplay()
+        } else {
+            print("No tags to remove.")
+        }
+    }
+    
     func updateTagDisplay() {
         guard let url = delegate?.currentImageURL(for: self) else {
-            currentTagsDisplayLabel.stringValue = "No image selected."
+            currentTagsDisplayLabel.stringValue = "Tidak ada gambar yang dipilih."
             setTaggingUI(enabled: false)
             return
         }
         
         let tags = delegate?.tags(for: self, url: url) ?? []
         if tags.isEmpty {
-            currentTagsDisplayLabel.stringValue = "None"
+            currentTagsDisplayLabel.stringValue = "Tidak ada"
         } else {
             currentTagsDisplayLabel.stringValue = tags.joined(separator: ", ")
         }
         setTaggingUI(enabled: true)
+        removeLastTagButton.isEnabled = !tags.isEmpty // Disable remove button if no tags exist
     }
     
     private func setTaggingUI(enabled: Bool) {
-        predefinedTagSelector.isEnabled = enabled
+        tagComboBox.isEnabled = enabled
         addTagButton.isEnabled = enabled
+        removeLastTagButton.isEnabled = enabled
     }
     
-    // --- Original Methods (Unchanged) ---
     @objc private func selectDirectoryClicked() {
         let openPanel = NSOpenPanel()
-        openPanel.message = "Please select a directory"
-        openPanel.prompt = "Select"
+        openPanel.message = "Silakan pilih direktori"
+        openPanel.prompt = "Pilih"
         openPanel.canChooseFiles = false
         openPanel.canChooseDirectories = true
         
@@ -363,7 +446,7 @@ class ControlsViewController: NSViewController {
     }
     
     private func updateDirectoryLabel(with url: URL) {
-        directoryLabel.stringValue = "Directory: \(url.lastPathComponent)"
+        directoryLabel.stringValue = "Direktori: \(url.lastPathComponent)"
         directoryLabel.toolTip = url.path
     }
     
@@ -406,5 +489,50 @@ class ControlsViewController: NSViewController {
         } catch {
             print("Error restoring directory bookmark: \(error)")
         }
+    }
+}
+
+// MARK: - NSComboBox Delegate & DataSource
+extension ControlsViewController: NSComboBoxDataSource, NSComboBoxDelegate {
+    
+    // --- DATA SOURCE METHODS ---
+    func numberOfItems(in comboBox: NSComboBox) -> Int {
+        return filteredTags.count
+    }
+    
+    func comboBox(_ comboBox: NSComboBox, objectValueForItemAt index: Int) -> Any? {
+        guard index < filteredTags.count else { return nil }
+        return filteredTags[index]
+    }
+    
+    // --- DELEGATE METHODS for filtering ---
+    func comboBox(_ comboBox: NSComboBox, completedString string: String) -> String? {
+        // This provides autocompletion
+        return allTags.first { $0.lowercased().hasPrefix(string.lowercased()) }
+    }
+    
+    func controlTextDidChange(_ obj: Notification) {
+        guard let comboBox = obj.object as? NSComboBox else { return }
+        
+        let filterString = comboBox.stringValue
+        if filterString.isEmpty {
+            filteredTags = allTags
+        } else {
+            filteredTags = allTags.filter {
+                $0.lowercased().contains(filterString.lowercased())
+            }
+        }
+        comboBox.reloadData()
+    }
+    
+    // --- NEW: Handle Enter Key Press ---
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(insertNewline(_:)) {
+            // User pressed Enter, so treat it like a button click.
+            self.addTagTapped()
+            return true // We handled the command.
+        }
+        // For all other commands, use the default behavior.
+        return false
     }
 }
