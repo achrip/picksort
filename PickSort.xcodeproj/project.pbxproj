@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		4A95F7062E2BEB5C0096CC12 /* PickSort.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickSort.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D829B4891D2A5218B37C3A0 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -41,8 +42,17 @@
 			isa = PBXGroup;
 			children = (
 				4A95F7062E2BEB5C0096CC12 /* PickSort.app */,
+				6570D17910A702D87F9A253A /* PickSort */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		6570D17910A702D87F9A253A /* PickSort */ = {
+			isa = PBXGroup;
+			children = (
+				9D829B4891D2A5218B37C3A0 /* MainViewController.swift */,
+			);
+			path = PickSort;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -64,8 +74,6 @@
 				4A95F7082E2BEB5C0096CC12 /* PickSort */,
 			);
 			name = PickSort;
-			packageProductDependencies = (
-			);
 			productName = PickSort;
 			productReference = 4A95F7062E2BEB5C0096CC12 /* PickSort.app */;
 			productType = "com.apple.product-type.application";
@@ -258,7 +266,6 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -286,7 +293,6 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
