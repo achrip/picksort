@@ -25,7 +25,8 @@ class SidebarViewModel {
         panel.begin { response in
             if response == .OK, let url = panel.url {
                 if !self.directories.contains(where: { $0.url == url }) {
-                    self.directories.append(Directory(url: url))
+                    let dirName = url.lastPathComponent
+                    self.directories.append(Directory(url: url, name: dirName))
                 }
             }
         }

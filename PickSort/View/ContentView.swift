@@ -17,14 +17,14 @@ struct ContentView: View {
             SidebarView(viewModel: $sidebarVM, selectedDir: $selectedDir)
             .frame(width: 150)
         } content: {
-            Text("Image")
-                .navigationTitle("Content")
-                .frame(minWidth: 400, maxWidth: .infinity)
+            GalleryView(selectedDir: $selectedDir)
+            .frame(minWidth: 400, maxWidth: .infinity)
         } detail: {
             Text("Controls")
                 .navigationTitle("Detail")
-                .frame(width: 200)
+                .navigationSplitViewColumnWidth(ideal: 250, max: 400)
         }
+        .navigationSplitViewStyle(.balanced)
     }
 }
 

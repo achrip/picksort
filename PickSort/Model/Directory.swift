@@ -9,5 +9,6 @@ import Foundation
 
 struct Directory: Identifiable, Hashable {
     let id = UUID()
-    let url: URL 
+    let url: URL
+    let name: String
 }
