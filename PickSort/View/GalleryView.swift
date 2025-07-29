@@ -13,13 +13,7 @@ struct GalleryView: View {
     @Binding var selectedDir: Directory?
     
     @State private var selectedImageURL: URL?
-    
-    private var imageFiles: [URL] {
-        guard let url = selectedDir?.url else { return [] }
-        let allFiles = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
-        let allSortedFiles = allFiles.sorted { $0.lastPathComponent < $1.lastPathComponent }
-        return allSortedFiles.filter { ["jpg", "jpeg", "png", "heic", "tiff", "raf", "nef"].contains($0.pathExtension.lowercased())}
-    }
+    @State private var imageURLs: [URL] = []
     
     var body: some View {
         VStack {
@@ -32,7 +26,7 @@ struct GalleryView: View {
                 
                 ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 10) {
-                        ForEach(imageFiles, id: \.self) { file in
+                        ForEach(imageURLs, id: \.self) { file in
                             ThumbnailView(url: file, size: 80)
                                 .frame(width: 80, height: 80)
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -53,8 +47,8 @@ struct GalleryView: View {
             }
         }
         .navigationTitle(selectedDir?.name ?? "Gallery")
-        .onChange(of: selectedDir) { _, _ in
-            self.selectedImageURL = imageFiles.first
+        .task(id: selectedDir) {
+            await loadImages(from: selectedDir)
         }
     }
 }
@@ -70,5 +64,40 @@ extension GalleryView {
         return try? NSWorkspace.shared.icon(forFile: url.path)
             .resized(to: size)
             
+    }
+    
+    func loadImages(from directory: Directory?) async {
+        guard let url = directory?.url else {
+            imageURLs = []
+            selectedImageURL = nil
+            return
+        }
+        
+        guard url.startAccessingSecurityScopedResource() else {
+            return
+        }
+        defer {
+            url.stopAccessingSecurityScopedResource()
+        }
+        
+        let validExtensions = ["jpg", "jpeg", "png", "heic", "tiff", "raf", "nef"]
+        do {
+            let contents = try FileManager.default.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles])
+            
+            let loadedURLs = contents
+                .filter { validExtensions.contains($0.pathExtension.lowercased()) }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            
+            self.imageURLs = loadedURLs
+            self.selectedImageURL = loadedURLs.first
+        } catch {
+           print("Error scanning directory: \(error)")
+            self.imageURLs = []
+            self.selectedImageURL = nil
+        }
+        
     }
 }

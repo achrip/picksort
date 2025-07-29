@@ -35,6 +35,9 @@ struct SidebarView: View {
             }
             .padding()
         }
+        .onAppear {
+            viewModel.restoreSavedDirectory()
+        }
     }
 }
 

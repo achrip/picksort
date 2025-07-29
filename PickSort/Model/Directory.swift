@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Directory: Identifiable, Hashable {
+struct Directory: Identifiable, Hashable, Equatable {
     let id = UUID()
     let url: URL
     let name: String
