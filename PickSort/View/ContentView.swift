@@ -22,7 +22,7 @@ struct ContentView: View {
         } detail: {
             Text("Controls")
                 .navigationTitle("Detail")
-                .navigationSplitViewColumnWidth(ideal: 250, max: 400)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         }
         .navigationSplitViewStyle(.balanced)
     }
