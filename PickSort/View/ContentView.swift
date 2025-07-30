@@ -20,9 +20,8 @@ struct ContentView: View {
             GalleryView(selectedDir: $selectedDir)
             .frame(minWidth: 400, maxWidth: .infinity)
         } detail: {
-            Text("Controls")
-                .navigationTitle("Detail")
-                .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+            ToolbarView()
+            .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         }
         .navigationSplitViewStyle(.balanced)
     }

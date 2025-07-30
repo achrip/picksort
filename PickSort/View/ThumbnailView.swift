@@ -46,16 +46,6 @@ extension ThumbnailView {
             representationTypes: .all
         )
         
-//        QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { representation, error  in
-//            if let representations = representation {
-//                DispatchQueue.main.async {
-//                    self.thumbnail = representation?.nsImage
-//                }
-//            } else if let error = error {
-//                print("Error generating thumbnail: \(error.localizedDescription)")
-//            }
-//            
-//        }
         do  {
            let representation = try await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)
             self.thumbnail = representation.nsImage

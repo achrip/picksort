@@ -74,8 +74,12 @@ class SidebarViewModel {
     }
     
     func removeDirectory(_ directory: Directory) {
-        if let index = directories.firstIndex(of: directory) {
-            directories.remove(at: index)
+        directories.removeAll { $0.id == directory.id }
+        
+        let remainingBookmarks = directories.compactMap { dir -> Data? in
+            try? dir.url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
         }
+        
+        UserDefaults.standard.set(remainingBookmarks, forKey: directoryBookmarkKey)
     }
 }
