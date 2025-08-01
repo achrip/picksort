@@ -11,8 +11,8 @@ import SwiftUI
 struct ToolbarView: View {
    
     @State private var tagFilename: String?
-    @State private var tags: [String] = []
-    @State private var selectedTags: Set<String> = []
+    @State private var tags: [ImageTag] = []
+    @State private var selectedTags: Set<ImageTag> = []
     @State private var searchText: String = ""
 
     var body: some View {
@@ -30,11 +30,25 @@ struct ToolbarView: View {
             
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(Array(selectedTags), id: \.self) { tag in
-                        Text(tag)
-                            .padding(6)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(8)
+                    ForEach(Array(selectedTags), id: \.title) { tag in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text((tag.alternativeText?.isEmpty == false && tag.alternativeText != "-" ? tag.alternativeText! : tag.title))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                selectedTags.remove(tag)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(6)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.horizontal)
@@ -51,12 +65,12 @@ struct ToolbarView: View {
                 }
             
             if !searchText.isEmpty {
-                List(filteredTags, id: \.self) { tag in
+                List(filteredTags, id: \.title) { tag in
                     Button(action: {
                         selectedTags.insert(tag)
                         searchText = ""
                     }) {
-                        Text(tag)
+                        Text(tag.title)
                     }
                     .buttonStyle(.plain)
                 }
@@ -66,11 +80,11 @@ struct ToolbarView: View {
         .padding()
     }
     
-    var filteredTags: [String] {
+    var filteredTags: [ImageTag] {
         if searchText.isEmpty {
             return tags
         } else {
-            return tags.filter { $0.localizedCaseInsensitiveContains(searchText) }
+            return tags.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
         }
     }
 }
@@ -88,7 +102,7 @@ extension ToolbarView {
             do {
                 let data = try Data(contentsOf: url)
                 tagFilename = url.lastPathComponent
-                let decodedTags = try JSONDecoder().decode([String].self, from: data)
+                let decodedTags = try JSONDecoder().decode([ImageTag].self, from: data)
                 tags = decodedTags
             } catch {
                 print("Failed to load JSON: \(error)")
