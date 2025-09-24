@@ -9,12 +9,13 @@ import Foundation
 import SwiftUI
 
 struct ToolbarView: View {
-   
+    
+    @Binding var image: ImageItem?
+    
     @State private var tagFilename: String?
     @State private var tags: [ImageTag] = []
-    @State private var selectedTags: Set<ImageTag> = []
     @State private var searchText: String = ""
-
+    
     var body: some View {
         let columns = [GridItem(.adaptive(minimum: 80))]
         
@@ -30,21 +31,24 @@ struct ToolbarView: View {
             
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(Array(selectedTags), id: \.title) { tag in
+                    ForEach(image?.tags ?? [], id: \.title) { tag in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text((tag.alternativeText?.isEmpty == false && tag.alternativeText != "-" ? tag.alternativeText! : tag.title))
                                     .fontWeight(.bold)
                                     .foregroundColor(.secondary)
                             }
-                            Spacer()
-                            Button {
-                                selectedTags.remove(tag)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.red)
-                            }
-                            .buttonStyle(.plain)
+//                            Spacer()
+//                            Button {
+////                                selectedTags.remove(tag)
+//                                if let img = image {
+//                                    img.tags.remove(tag)
+//                                }
+//                            } label: {
+//                                Image(systemName: "xmark.circle.fill")
+//                                    .foregroundColor(.red)
+//                            }
+//                            .buttonStyle(.plain)
                         }
                         .padding(6)
                         .background(Color.gray.opacity(0.2))
@@ -52,29 +56,6 @@ struct ToolbarView: View {
                     }
                 }
                 .padding(.horizontal)
-            }
-            
-            TextField("Add tag...", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal)
-                .onSubmit {
-                    if let first = filteredTags.first {
-                        selectedTags.insert(first)
-                        searchText = ""
-                    }
-                }
-            
-            if !searchText.isEmpty {
-                List(filteredTags, id: \.title) { tag in
-                    Button(action: {
-                        selectedTags.insert(tag)
-                        searchText = ""
-                    }) {
-                        Text(tag.title)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(height: 100)
             }
         }
         .padding()
@@ -90,6 +71,38 @@ struct ToolbarView: View {
 }
 
 extension ToolbarView {
+    @ViewBuilder
+    private func TagSearchBar() -> some View {
+        TextField("Add tag...", text: $searchText)
+            .textFieldStyle(.roundedBorder)
+            .padding(.horizontal)
+            .onSubmit {
+                if let first = filteredTags.first, var img = image {
+                    //                        selectedTags.insert(first)
+                    img.tags.insert(first)
+                    image = img
+                    searchText = ""
+                }
+            }
+        
+        if !searchText.isEmpty {
+            List(filteredTags, id: \.title) { tag in
+                Button(action: {
+                    //                        selectedTags.insert(tag)
+                    if var img = image {
+                        img.tags.insert(tag)
+                        image = img
+                    }
+                    searchText = ""
+                }) {
+                    Text(tag.title)
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(height: 100)
+        }
+    }
+    
     func selectAndLoadJSON() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
@@ -112,5 +125,5 @@ extension ToolbarView {
 }
 
 #Preview {
-    ToolbarView()
+//    ToolbarView()
 }

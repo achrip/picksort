@@ -23,3 +23,7 @@ xcuserdata/
 # XcodeBuild.nvim stuff
 .nvim/*
 buildServer.json
+
+# aider model config
+.aider.*
+.aider*

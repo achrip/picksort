@@ -11,36 +11,19 @@ import SwiftUI
 struct GalleryView: View {
     
     @Binding var selectedDir: Directory?
-    
-    @State private var selectedImageURL: URL?
-    @State private var imageURLs: [URL] = []
+    @Binding var selectedImage: ImageItem?
+    @Binding var imageItems: [ImageItem]
     
     var body: some View {
         VStack {
-            if let url = selectedImageURL {
+            if let url = selectedImage?.url {
                 ThumbnailView(url: url, size: 400)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
                 
                 Divider()
                 
-                ScrollView(.horizontal, showsIndicators: true) {
-                    HStack(spacing: 10) {
-                        ForEach(imageURLs, id: \.self) { file in
-                            ThumbnailView(url: file, size: 80)
-                                .frame(width: 80, height: 80)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                                .overlay(RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.accentColor, lineWidth: selectedImageURL == file ? 3 : 0)
-                                )
-                                .onTapGesture {
-                                    self.selectedImageURL = file
-                                }
-                        }
-                    }
-                    .padding()
-                }
-                .frame(height: 100)
+                carouselItems(imageItems)
             } else {
                 Text(selectedDir == nil ? "Select a directory" : "No images found")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -53,6 +36,33 @@ struct GalleryView: View {
     }
 }
 
+// MARK: - UI Extensions
+extension GalleryView {
+    
+    @ViewBuilder
+    func carouselItems(_ images: [ImageItem]) -> some View {
+        ScrollView(.horizontal, showsIndicators: true) {
+                    HStack(spacing: 10) {
+                        ForEach(images, id: \.self) { image in
+                            ThumbnailView(url: image.url, size: 80)
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.accentColor, lineWidth: selectedImage?.url == image.url ? 3 : 0)
+                                )
+                                .onTapGesture {
+                                    selectedImage = image
+                                }
+                        }
+                    }
+                    .padding()
+                }
+                .frame(height: 100)
+    }
+    
+}
+
+// MARK: - Functional Extensions
 extension GalleryView {
     
     func files(in directory: URL) -> [URL] {
@@ -68,8 +78,6 @@ extension GalleryView {
     
     func loadImages(from directory: Directory?) async {
         guard let url = directory?.url else {
-            imageURLs = []
-            selectedImageURL = nil
             return
         }
         
@@ -91,12 +99,15 @@ extension GalleryView {
                 .filter { validExtensions.contains($0.pathExtension.lowercased()) }
                 .sorted { $0.lastPathComponent < $1.lastPathComponent }
             
-            self.imageURLs = loadedURLs
-            self.selectedImageURL = loadedURLs.first
+            let items = loadedURLs.map { ImageItem(url: $0, tags: []) }
+            
+            await MainActor.run {
+                imageItems = items
+                selectedImage = items.first
+            }
+            
         } catch {
            print("Error scanning directory: \(error)")
-            self.imageURLs = []
-            self.selectedImageURL = nil
         }
         
     }

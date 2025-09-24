@@ -7,8 +7,8 @@
 
 import Foundation
 
-struct ImageItem: Identifiable {
-    let id: UUID
+struct ImageItem: Identifiable, Hashable {
+    let id = UUID()
     let url: URL
-    var tags: Set<String>
+    var tags: Set<ImageTag>
 }
